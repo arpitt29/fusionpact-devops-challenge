@@ -3,8 +3,6 @@ name: Fusionpact DevOps CI/CD
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
 
 jobs:
   build-and-push:
@@ -42,29 +40,23 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Decode SSH key
-        run: |
-          echo "${{ secrets.DEPLOY_SSH_KEY_B64 }}" | base64 --decode > $HOME/private_key.pem
-          chmod 600 $HOME/private_key.pem
-          ls -la $HOME/private_key.pem  # Debug: show key file exists
-
       - name: Deploy to Production Server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
-          key_path: $HOME/private_key.pem
+          # FIX: The key is passed directly from secrets. No need for files.
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
           script: |
-            echo "✅ Connected to EC2 — starting deployment..."
-            cd /home/${{ secrets.DEPLOY_USER }}/fusionpact-devops-challenge || \
-            (mkdir -p /home/${{ secrets.DEPLOY_USER }}/fusionpact-devops-challenge && \
-            git clone https://github.com/${{ github.repository }} .)
+            echo "✅ Connection successful! Starting deployment..."
+            # Ensure the project directory exists
+            cd /home/${{ secrets.DEPLOY_USER }}/fusionpact-devops-challenge || git clone https://github.com/${{ github.repository }} /home/${{ secrets.DEPLOY_USER }}/fusionpact-devops-challenge
+            cd /home/${{ secrets.DEPLOY_USER }}/fusionpact-devops-challenge
 
+            # Pull latest changes and run services
             git pull origin main
             docker-compose pull
             docker-compose up -d --remove-orphans
             docker image prune -f
+            echo "🚀 Deployment finished!"
