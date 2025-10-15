@@ -37,33 +37,29 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/fusionpact-frontend:latest
 
   deploy:
-    needs: build-and-push # Ensures this job runs after images are built
+    needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' # Deploy only on pushes to main
+    if: github.ref == 'refs/heads/main'
 
     steps:
+      - name: Decode SSH key
+        run: |
+          echo "${{ secrets.DEPLOY_SSH_KEY_B64 }}" | base64 --decode > private_key.pem
+          chmod 600 private_key.pem
+
       - name: Deploy to Production Server
-        # Using a more recent version of the action
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          key_path: private_key.pem
           port: 22
           script: |
-            # Navigate to your project directory
-            cd /home/${{ secrets.DEPLOY_USER }}/fusionpact-devops-challenge
+            cd /home/${{ secrets.DEPLOY_USER }}/fusionpact-devops-challenge || \
+            (mkdir -p /home/${{ secrets.DEPLOY_USER }}/fusionpact-devops-challenge && \
+            git clone https://github.com/${{ github.repository }} .)
 
-            # Pull the latest changes from your repo (specifically the docker-compose.yml)
             git pull origin main
-
-            # Pull the new images that were just built by the CI job
             docker-compose pull
-
-            # Restart the services with the new images.
-            # The -d flag runs them in the background.
-            # --remove-orphans cleans up old containers.
             docker-compose up -d --remove-orphans
-
-            # (Optional but recommended) Clean up old, unused Docker images
             docker image prune -f
