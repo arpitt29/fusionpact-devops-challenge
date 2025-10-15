@@ -110,3 +110,5 @@ This was verified by:
 2.  Stopping and removing all containers with `docker-compose down`.
 3.  Restarting the application with `docker-compose up -d`.
 4.  Confirming that the historical metrics data was still present in the Prometheus dashboard, proving it was successfully persisted on the host machine's volume, independent of the container's lifecycle.
+
+##updated
