@@ -2,35 +2,50 @@ version: '3.8'
 
 services:
   backend:
-    build: ./backend
+    image: arpitt29/fusionpact-backend:latest
     container_name: fastapi-backend
     ports:
       - "8000:8000"
     networks:
-      - devops_net
+      - app-network
+    restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    image: arpitt29/fusionpact-frontend:latest
     container_name: html-frontend
     ports:
       - "8080:80"
-    depends_on:
-      - backend
     networks:
-      - devops_net
+      - app-network
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
     ports:
       - "9090:9090"
-    depends_on:
-      - backend
     networks:
-      - devops_net
+      - app-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - app-network
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+  grafana-data:
 
 networks:
-  devops_net:
+  app-network:
     driver: bridge
